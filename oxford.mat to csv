@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import scipy.io as sio
-mat=sio.loadmat('D:/zieit/диплом/Oxford_Battery_Degradation_Dataset_1.mat')# load mat-file
+mat=sio.loadmat('D:/zieit/диплом/Oxford_Battery_Degradation_Dataset_1.mat')# ссылка на источник https://ora.ox.ac.uk/objects/uuid:03ba4b01-cfed-46d3-9b1a-7d4a7bdf6fac
 print(mat)
 mat = {k:v for k, v in mat.items() if k[0] != '_'}
 
