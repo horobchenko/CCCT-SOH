@@ -1,0 +1,21 @@
+import numpy as np
+import pandas as pd
+import scipy.io as sio
+mat=sio.loadmat('D:/zieit/диплом/Oxford_Battery_Degradation_Dataset_1.mat')# load mat-file
+print(mat)
+mat = {k:v for k, v in mat.items() if k[0] != '_'}
+
+# parsing arrays in arrays in mat file 
+data = {}
+for k,v in mat.items():
+    arr = v[0]
+    for i in range(len(arr)):
+        sub_arr = v[0][i]
+        lst= []
+        for sub_index in range(len(sub_arr)):
+            vals = sub_arr[sub_index][0][0]
+            lst.append(vals)
+        data['row_{}'.format(i)] = lst
+        
+data_file = pd.DataFrame.from_dict(data)
+data_file.to_csv("D:/zieit/диплом/oxford.csv")
