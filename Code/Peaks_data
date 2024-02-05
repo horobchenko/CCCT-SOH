@@ -42,7 +42,7 @@ def width_peaks(dataframe):
         rel_h = 1 - (cycchargeg['G_Smoothed_dQ/dV'][peaks].iloc[i] - prominences[i]/cycchargeg['G_Smoothed_dQ/dV'][peaks].iloc[i])
         width = peak_widths(cycchargeg['G_Smoothed_dQ/dV'], np.array(peaks[i]).reshape(1))
         width_l.append(width)    
-    return width_l, prominences_l
+    return width_l, prominences_l, peaks
 
 #Создаём переменные dQ/dV, V для кривой, подбираем параметры фильтра
 ax = plt.axes()# задаём координаты
@@ -66,7 +66,7 @@ for cycle in range (1,len(np.unique(np.array(data['Cycle_Index'])))+1):
     dQdV_table = pd.concat([dQdV_table, cycchargeg], ignore_index = True)
    
     #ишем широту (для энергоёмкости под пиком) и амплитуду пиков 
-    width, prominences = width_peaks(cycchargeg)
+    width, prominences, peaks = width_peaks(cycchargeg)
     
     #ищем общую энергоёмкость под пиком, добавляем все данные по каждому пику в таблицу
     w = np.array(width)
