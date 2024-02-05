@@ -55,8 +55,8 @@ for cycle in range (1,len(np.unique(np.array(data['Cycle_Index'])))+1, 11):
 
 #Таблицы для сохранения результатов
 dQdV_table = pd.DataFrame(data = None, index = None, columns = data.columns.values.tolist()) # с тремя колонками для Inc curve
-peak_table = pd.DataFrame(data = None, index = None, columns = ['cycle','peak_number','index_left(V)', 
-                                                                'index_right(V)','capacity_under_peak','prominance'])#данные пиков
+peak_table = pd.DataFrame(data = None, index = None, columns = ['cycle','peak_number','peak_left_border(V)', 'peak (V)',
+                                                                'peak_right_border(V)','capacity_under_peak','prominance'])#данные пиков
 
 #Получаем данные для Inc curve по каждому циклу
 for cycle in range (1,len(np.unique(np.array(data['Cycle_Index'])))+1):
@@ -71,10 +71,13 @@ for cycle in range (1,len(np.unique(np.array(data['Cycle_Index'])))+1):
     #ищем общую энергоёмкость под пиком, добавляем все данные по каждому пику в таблицу
     w = np.array(width)
     for i in range(0, len(w)):
-        index_left_v = cycchargeg['Charge_Capacity(Ah)'][w[i][2].round()].item()
-        index_right_v = cycchargeg['Charge_Capacity(Ah)'][w[i][3].round()].item()
-        cap = index_right_v-index_left_v
-        peak_table.loc[len(peak_table.index)] = (cycle, i, index_left_v, index_right_v, cap,np.array(prominences).T[i].item())
+        index_left = cycchargeg['Charge_Capacity(Ah)'][w[i][2].round()].item()# значение єнергоёмкости на границе левого пика
+        index_right = cycchargeg['Charge_Capacity(Ah)'][w[i][3].round()].item()# правого
+        cap = index_right-index_left # энергоёмкость в пределах пика
+        index_left_v =cycchargeg['Voltage(V)'][w[i][2].round()].item() # значение напряжения на границе левого пика
+        index_right_v =cycchargeg['Voltage(V)'][w[i][3].round()].item() # правого
+        peak_table.loc[len(peak_table.index)] = (cycle, i, index_left_v, cycchargeg['Voltage(V)'].iloc[peaks[i].item()], index_right_v, cap,np.array(prominences).T[i].item())
+   
 
   # cохраняем таблицы
     dQdv_table.to_csv('...../dQ-dV_CS2_33_8_30_10.csv')
