@@ -1,0 +1,83 @@
+import pandas as pd
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import numpy as np
+import scipy.io
+from scipy.signal import  peak_prominences
+from scipy.signal import chirp, find_peaks, peak_widths
+
+#Загрузка данных
+adress = 'D:/zieit/диплом/CS2_33_9_17_10.csv'
+data = pd.read_csv(adress)
+
+# Обработка данных для получения Incremental curve
+def inc_curve(data, n):
+    cyc = data[data['Cycle_Index']==n] # выбираем данные по отдельному циклу
+    cyc['roundedV'] = round(cyc['Voltage(V)'], 3) #округляем
+    cyc = cyc.drop_duplicates(subset=['roundedV','Cycle_Index']) # удаляем дубликаты
+    cyc = cyc.reset_index(drop=True)# переустанавливаем индексы после удаления рядов дупликатов
+    cyc['dV'] = cyc['Voltage(V)'].diff()# добавляем данные интервала напряжения в отдельный столбец
+    cyccharge = cyc[cyc['Current(A)'] > 0]# оставляем только данные заряда батареи
+    cyccharge['Charge_dQ'] = cyccharge['Charge_Capacity(Ah)'].diff()# добавляем данные интервала ёмкости в отдельный столбец
+    cyccharge['dQ/dV'] = cyccharge['Charge_dQ'] /cyccharge['dV']# считаем и добавляем в отдельный столбец dQ/dV
+    cyccharge[['dQ/dV', 'dV', 'Charge_dQ']] = cyccharge[['dQ/dV', 'dV', 'Charge_dQ']].fillna(0)# заполняем 0 отсутств. данные
+    cyccharge = cyccharge[cyccharge['dQ/dV'] >= 0]# оставляем положительные значения
+    return cyccharge
+
+# фильтр Гаусса
+def gaussian_f(dataframe, s):
+    unfilt = dataframe['dQ/dV']
+    unfiltar = unfilt.values
+    dataframe['G_Smoothed_dQ/dV'] = scipy.ndimage.gaussian_filter(unfiltar, sigma=s)
+    return dataframe
+
+#Получение амплитуды и ширины пиков
+def width_peaks(dataframe):
+    width_l = list()
+    prominences_l = list()
+    peaks, _ = find_peaks(cycchargeg['G_Smoothed_dQ/dV'])
+    prominences = peak_prominences(cycchargeg['G_Smoothed_dQ/dV'], peaks)[0]
+    prominences_l.append(prominences) 
+    for i in range(0, len(peaks)):
+        rel_h = 1 - (cycchargeg['G_Smoothed_dQ/dV'][peaks].iloc[i] - prominences[i]/cycchargeg['G_Smoothed_dQ/dV'][peaks].iloc[i])
+        width = peak_widths(cycchargeg['G_Smoothed_dQ/dV'], np.array(peaks[i]).reshape(1))
+        width_l.append(width)    
+    return width_l, prominences_l
+
+#Создаём переменные dQ/dV, V для кривой, подбираем параметры фильтра
+ax = plt.axes()# задаём координаты
+ax.set(xlabel='Voltage', ylabel='dQ/dV')# название осей
+# Подбираем количество циклов для наглядности и стандартное отклонение для фильтра Гаусса
+for cycle in range (1,len(np.unique(np.array(data['Cycle_Index'])))+1, 11):
+    cyccharge = inc_curve(data, cycle)
+    cycchargeg = gaussian_f(cyccharge, 3)# фильтр Гаусса
+    ax.plot(cycchargeg['Voltage(V)'], cyccharge['G_Smoothed_dQ/dV'])# рисуем график c фильтром 
+
+#Таблицы для сохранения результатов
+dQdV_table = pd.DataFrame(data = None, index = None, columns = data.columns.values.tolist()) # с тремя колонками для Inc curve
+peak_table = pd.DataFrame(data = None, index = None, columns = ['cycle','peak_number','index_left(V)', 
+                                                                'index_right(V)','capacity_under_peak','prominance'])#данные пиков
+
+#Получаем данные для Inc curve по каждому циклу
+for cycle in range (1,len(np.unique(np.array(data['Cycle_Index'])))+1):
+    cyccharge = inc_curve(data, cycle)
+    cycchargeg = gaussian_f(cyccharge, 3)# фильтр Гаусса
+    #добавляем полученные данные в общую таблицу
+    dQdV_table = pd.concat([dQdV_table, cycchargeg], ignore_index = True)
+   
+    #ишем широту (для энергоёмкости под пиком) и амплитуду пиков 
+    width, prominences = width_peaks(cycchargeg)
+    
+    #ищем общую энергоёмкость под пиком, добавляем все данные по каждому пику в таблицу
+    w = np.array(width)
+    for i in range(0, len(w)):
+        index_left_v = cycchargeg['Charge_Capacity(Ah)'][w[i][2].round()].item()
+        index_right_v = cycchargeg['Charge_Capacity(Ah)'][w[i][3].round()].item()
+        cap = index_right_v-index_left_v
+        peak_table.loc[len(peak_table.index)] = (cycle, i, index_left_v, index_right_v, cap,np.array(prominences).T[i].item())
+
+  # cохраняем таблицы
+    dQdv_table.to_csv('...../dQ-dV_CS2_33_8_30_10.csv')
+    peak_table.to_csv('...../peak_CS2_33_8_30_10.csv')
+    
+
